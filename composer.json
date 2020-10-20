@@ -1,0 +1,30 @@
+{
+  "name": "ingelby/espn-api",
+  "description": "Yii2 ESPN Api Wrapper",
+  "type": "library",
+  "license": "Proprietary",
+  "authors": [
+    {
+      "name": "George Hallam",
+      "email": "george.hallam@ingelby.com"
+    }
+  ],
+  "autoload": {
+    "psr-4": {
+      "Ingelby\\Espn\\": "src"
+    }
+  },
+  "require": {
+    "php": ">=7.4.0",
+    "ingelby/toolbox": "dev-master",
+    "nesbot/carbon": "2.*"
+  },
+  "require-dev": {
+  },
+  "repositories": [
+    {
+      "type": "vcs",
+      "url": "git@github.com:ingelby/toolbox.git"
+    }
+  ]
+}
