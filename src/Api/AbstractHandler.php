@@ -67,7 +67,7 @@ abstract class AbstractHandler extends InguzzleHandler
     {
         \Yii::info('Calling: ' . $uri);
         $defaultQueryParemeters = [
-            'client' => $this->apiKey,
+            'apikey' => $this->apiKey,
         ];
 
         try {
