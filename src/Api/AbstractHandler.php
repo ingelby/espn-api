@@ -16,6 +16,7 @@ use ingelby\toolbox\services\inguzzle\InguzzleHandler;
 
 abstract class AbstractHandler extends InguzzleHandler
 {
+    protected const DEFAULT_BASE_URL = 'http://api.espn.com';
     protected const DEFAULT_TIMEOUT = 10;
 
     protected ?string $baseUrl;
@@ -30,11 +31,12 @@ abstract class AbstractHandler extends InguzzleHandler
      */
     public function __construct(array $espnConfig = [], array $clientConfig = [])
     {
-        if (!array_key_exists('baseUrl', $espnConfig)) {
-            throw new EspnConfigurationException('Missing baseUrl');
-        }
         if (!array_key_exists('apiKey', $espnConfig)) {
             throw new EspnConfigurationException('Missing apiKey');
+        }
+
+        if (!array_key_exists('baseUrl', $espnConfig)) {
+            $espnConfig['baseUrl'] = static::DEFAULT_BASE_URL;
         }
 
         $this->baseUrl = $espnConfig['baseUrl'];
