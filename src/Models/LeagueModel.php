@@ -6,13 +6,13 @@ namespace Ingelby\Espn\Models;
 
 class LeagueModel extends AbstractEspnModel
 {
-    public ?string $name;
-    public ?string $slug;
-    public ?string $abbreviation;
-    public ?int $id;
-    public ?string $uid;
-    public ?int $groupId;
-    public ?string $shortName;
+    public ?string $name = null;
+    public ?string $slug = null;
+    public ?string $abbreviation = null;
+    public ?int $id = null;
+    public ?string $uid = null;
+    public ?int $groupId = null;
+    public ?string $shortName = null;
     protected ?SeasonModel $season;
     protected ?WeekModel $week;
 
@@ -31,7 +31,7 @@ class LeagueModel extends AbstractEspnModel
                 ],
             ];
     }
-
+    
     /**
      * @param SeasonModel $seasonModel
      */

@@ -6,11 +6,11 @@ namespace Ingelby\Espn\Models;
 
 class SeasonModel extends AbstractEspnModel
 {
-    public ?string $year;
-    public ?int $type;
-    public ?string $description;
-    public ?string $startDate;
-    public ?string $endDate;
+    public ?string $year = null;
+    public ?int $type = null;
+    public ?string $description = null;
+    public ?string $startDate = null;
+    public ?string $endDate = null;
 
     public function rules()
     {

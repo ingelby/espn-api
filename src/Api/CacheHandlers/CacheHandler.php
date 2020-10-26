@@ -34,20 +34,40 @@ abstract class CacheHandler
     }
 
     /**
+     * @param string $glue
+     * @param array  $array
+     * @return false|string
+     */
+    protected function multiImplode(string $glue, array $array) {
+        $implodedString = '';
+
+        foreach ($array as $item) {
+            if (is_array($item)) {
+                $implodedString .= multi_implode($item, $glue) . $glue;
+            } else {
+                $implodedString .= $item . $glue;
+            }
+        }
+
+        $implodedString = substr($implodedString, 0, 0-strlen($glue));
+
+        return $implodedString;
+    }
+    /**
      * @param       $method
      * @param array $arguments
      * @noinspection PhpDocRedundantThrowsInspection
      */
     public function __call($method, array $arguments)
     {
-        Yii::info('Calling cache handler with method: ' . $method . ' with ' . implode(', ', $arguments));
+        Yii::info('Calling cache handler with method: ' . $method . ' with ' . var_export($arguments, true));
 
         if (!method_exists($this->handler, $method)) {
             Yii::error($method . ' does not exists in class: ' . get_class($this->handler));
             throw new ServerErrorHttpException('Unknown function');
         }
 
-        $cacheKey = get_class($this->handler) . $method . implode($arguments);
+        $cacheKey = get_class($this->handler) . $method . var_export($arguments, true);
         Yii::debug('md5 of ' . $cacheKey);
         $cacheKey = md5($cacheKey);
         Yii::debug('md5 value ' . $cacheKey);

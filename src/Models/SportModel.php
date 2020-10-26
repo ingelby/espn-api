@@ -6,10 +6,10 @@ namespace Ingelby\Espn\Models;
 
 class SportModel extends AbstractEspnModel
 {
-    public ?string $name;
-    public ?string $slug;
-    public ?int $id;
-    public ?string $uid;
+    public ?string $name = null;
+    public ?string $slug = null;
+    public ?int $id = null;
+    public ?string $uid = null;
     public array $links = [];
 
     /**
@@ -29,6 +29,15 @@ class SportModel extends AbstractEspnModel
                         'uid',
                     ],
                     'safe',
+                ],
+                [
+                    [
+                        'name',
+                        'slug',
+                        'id',
+                        'uid',
+                    ],
+                    'required',
                 ],
             ];
     }

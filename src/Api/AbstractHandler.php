@@ -3,6 +3,7 @@
 namespace Ingelby\Espn\Api;
 
 use common\helpers\SessionGuid;
+use GuzzleHttp\Promise\Promise;
 use Ingelby\Espn\Exceptions\EspnClientException;
 use Ingelby\Espn\Exceptions\EspnConfigurationException;
 use Ingelby\Espn\Exceptions\EspnMappedException;
@@ -94,6 +95,28 @@ abstract class AbstractHandler extends InguzzleHandler
         return $response;
     }
 
+    /**
+     * @param string $uri
+     * @param array  $queryParameters
+     * @param array  $additionalHeaders
+     * @return Promise
+     * @throws EspnClientException
+     * @throws EspnMappedException
+     * @throws EspnServerException
+     */
+    public function getAsync($uri, array $queryParameters = [], array $additionalHeaders = []): Promise
+    {
+        \Yii::info('Calling: ' . $uri);
+        $defaultQueryParemeters = [
+            'apikey' => $this->apiKey,
+        ];
+
+        return parent::getAsync(
+            $uri,
+            array_merge($defaultQueryParemeters, $queryParameters),
+            $additionalHeaders
+        );
+    }
 
     /**
      * @param array $response
