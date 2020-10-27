@@ -6,6 +6,9 @@ namespace Ingelby\Espn\Models;
 
 class EnrichedTeamModel extends TeamModel
 {
+    public const CACHE_KEY = 'ENRICHED_TEAM_MODEL_';
+    public const CACHE_TTL = 60 * 60 * 12;
+
     /**
      * @var TeamLogoModel[]
      */

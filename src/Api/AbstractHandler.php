@@ -20,6 +20,12 @@ abstract class AbstractHandler extends InguzzleHandler
     protected const DEFAULT_BASE_URL = 'http://api.espn.com';
     protected const DEFAULT_TIMEOUT = 10;
 
+    protected const MAX_RESULTS_PER_PAGE = 500; //Max allowed by the API
+    protected const LIMIT = 'limit';
+    protected const OFFSET = 'offset';
+
+    protected const RESULT_COUNT = 'resultsCount';
+
     protected ?string $baseUrl;
     protected ?string $apiKey;
     protected string $routeUri = '';

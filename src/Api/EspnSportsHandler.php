@@ -5,6 +5,7 @@ namespace Ingelby\Espn\Api;
 use GuzzleHttp\Exception\ConnectException;
 use GuzzleHttp\Exception\RequestException;
 use GuzzleHttp\Exception\TransferException;
+use Ingelby\Espn\Constants\SportSlug;
 use Ingelby\Espn\Exceptions\EspnClientException;
 use Ingelby\Espn\Exceptions\EspnMappedException;
 use Ingelby\Espn\Exceptions\EspnServerException;
@@ -78,6 +79,20 @@ class EspnSportsHandler extends AbstractHandler
      * @param array $rawLeagueResponse
      * @throws EspnClientException
      */
+    protected function validateTeamsResponse(array $rawLeagueResponse)
+    {
+        if (!array_key_exists('teams', $rawLeagueResponse)) {
+            throw new EspnClientException(400, 'Error getting teams data, no events key');
+        }
+        if (!is_array($rawLeagueResponse['teams'])) {
+            throw new EspnClientException(400, 'No teams data');
+        }
+    }
+
+    /**
+     * @param array $rawLeagueResponse
+     * @throws EspnClientException
+     */
     protected function validateCompetitionsResponse(array $rawEventResponse)
     {
         if (!array_key_exists('competitions', $rawEventResponse)) {
@@ -89,13 +104,14 @@ class EspnSportsHandler extends AbstractHandler
     }
 
     /**
-     * @param bool $includeLeageData WARNING: Setting this to true, will likey cause a timeout
+     * @param bool     $includeLeageData WARNING: Setting this to true, will likey cause a timeout if you include cricket
+     * @param string[] $excludeSportsSlugs
      * @return SportModel[]
      * @throws EspnClientException
      * @throws EspnMappedException
      * @throws EspnServerException
      */
-    public function getAll(bool $includeLeageData = false): array
+    public function getAll(bool $includeLeageData = false, array $excludeSportsSlugs = []): array
     {
         $rawResponse = $this->get('/v1/sports');
 
@@ -108,6 +124,10 @@ class EspnSportsHandler extends AbstractHandler
             $sportModel->setAttributes($rawSportData);
             if (!$sportModel->validate()) {
                 \Yii::warning('Unable to map sports data, reason: ' . implode(', ', $sportModel->getFirstErrors()));
+                continue;
+            }
+            if (in_array($sportModel->slug, $excludeSportsSlugs, true)) {
+                \Yii::info('Sportslug: ' . $sportModel->slug . ' in exclude array, skipping');
                 continue;
             }
             if (array_key_exists('leagues', $rawSportData) && is_array($rawSportData['leagues']) && $includeLeageData) {
@@ -197,6 +217,46 @@ class EspnSportsHandler extends AbstractHandler
     }
 
     /**
+     * @param string $sportSlug
+     * @param string $leagueSlug
+     * @return EnrichedTeamModel[]
+     * @throws EspnClientException
+     * @throws EspnMappedException
+     * @throws EspnServerException
+     */
+    public function getSportsLeagueTeams(string $sportSlug, string $leagueSlug): array
+    {
+        $rawResponse = $this->get(
+            '/v1/sports/' . $sportSlug . '/' . $leagueSlug . '/teams',
+            [
+                static::LIMIT => static::MAX_RESULTS_PER_PAGE,
+            ]
+        );
+
+        if ($rawResponse[static::RESULT_COUNT] > static::MAX_RESULTS_PER_PAGE) {
+            //@Todo, add pagination
+            \Yii::warning(
+                'There are more results, than we are returning, limit: ' . static::MAX_RESULTS_PER_PAGE .
+                ' resultCount: ' . $rawResponse[static::RESULT_COUNT]
+            );
+        }
+
+        $this->validateSportsResponse($rawResponse);
+        $rawSportResponse = current($rawResponse['sports']);
+        $this->validateLeagueResponse($rawSportResponse);
+        $rawLeagueData = current($rawSportResponse['leagues']);
+        $this->validateTeamsResponse($rawLeagueData);
+
+        $teams = [];
+        foreach ($rawLeagueData['teams'] as $rawTeamData) {
+            $enrichedTeamModel = $this->mapEnrichedTeamData($rawTeamData);
+            $teams[$enrichedTeamModel->id] = $enrichedTeamModel;
+        }
+
+        return $teams;
+    }
+
+    /**
      * @param string[] $leagueSlugs
      * @return EventModel[][][] ['sportSlug' => ['leagueSlug' => [EventModel[]]]]
      * @throws EspnClientException
@@ -244,6 +304,8 @@ class EspnSportsHandler extends AbstractHandler
     }
 
     /**
+     * WARNING: Do not use with the cacheHandler, need some extra work to clevery autocache results
+     *
      * @param string $sportSlug
      * @param string $leagueSlug
      * @param array  $teamIds
@@ -255,7 +317,13 @@ class EspnSportsHandler extends AbstractHandler
         try {
             $promises = [];
             foreach ($teamIds as $teamId) {
-                $promises[$teamId] = $this->getAsync('/v1/sports/' . $sportSlug . '/' . $leagueSlug . '/teams/' . $teamId);
+                if ($team = \Yii::$app->cache->get(EnrichedTeamModel::CACHE_KEY . $teamId)) {
+                    \Yii::info('Got teamId: ' . $teamId . ' from cache');
+                    $teams[$teamId] = $team;
+                    continue;
+                }
+                $uri = '/v1/sports/' . $sportSlug . '/' . $leagueSlug . '/teams/' . $teamId;
+                $promises[$teamId] = $this->getAsync($uri);
             }
 
             try {
@@ -271,14 +339,14 @@ class EspnSportsHandler extends AbstractHandler
                     \Yii::warning($teamId . ' request not fulfilled, state: ' . $result['state']);
                     continue;
                 }
-                $rawResponseAsString =  $result['value']->getBody()->getContents();
+                $rawResponseAsString = $result['value']->getBody()->getContents();
 
                 \Yii::info('raw result data: ' . $rawResponseAsString);
 
                 try {
                     $rawResponse = Json::decode($rawResponseAsString);
                     if (null === $rawResponse) {
-                        \Yii::warning('Unable to decode: '. $rawResponseAsString);
+                        \Yii::warning('Unable to decode: ' . $rawResponseAsString);
                         continue;
                     }
                     $this->validateSportsResponse($rawResponse);
@@ -291,14 +359,12 @@ class EspnSportsHandler extends AbstractHandler
                     }
 
                     $rawTeamData = current($rawLeagueData['teams']);
-                    $enrichedTeamModel = new EnrichedTeamModel();
-                    $enrichedTeamModel->setAttributes($rawTeamData);
-                    if (isset($rawTeamData['logos'][TeamLogoModel::SIZE_FULL])) {
-                        $logoModel = new TeamLogoModel();
-                        $logoModel->setAttributes($rawTeamData['logos'][TeamLogoModel::SIZE_FULL]);
-                        $enrichedTeamModel->addLogo(TeamLogoModel::SIZE_FULL, $logoModel);
-                    }
-                    $teams[$teamId] = $enrichedTeamModel;
+                    $teams[$teamId] = $this->mapEnrichedTeamData($rawTeamData);
+                    \Yii::$app->cache->set(
+                        EnrichedTeamModel::CACHE_KEY . $teamId,
+                        $enrichedTeamModel,
+                        EnrichedTeamModel::CACHE_TTL
+                    );
                 } catch (EspnClientException $exception) {
                     \Yii::error('Unable to map team id: ' . $teamId . ', error: ' . $exception->getMessage());
                 }
@@ -359,6 +425,23 @@ class EspnSportsHandler extends AbstractHandler
             $leagueModel->setWeek($weekModel);
         }
         return $leagueModel;
+    }
+
+    /**
+     * @param array $rawTeamData
+     * @return EnrichedTeamModel
+     */
+    protected function mapEnrichedTeamData(array $rawTeamData): EnrichedTeamModel
+    {
+        $enrichedTeamModel = new EnrichedTeamModel();
+        $enrichedTeamModel->setAttributes($rawTeamData);
+        if (isset($rawTeamData['logos'][TeamLogoModel::SIZE_FULL])) {
+            $logoModel = new TeamLogoModel();
+            $logoModel->setAttributes($rawTeamData['logos'][TeamLogoModel::SIZE_FULL]);
+            $enrichedTeamModel->addLogo(TeamLogoModel::SIZE_FULL, $logoModel);
+        }
+
+        return $enrichedTeamModel;
     }
 
     /**

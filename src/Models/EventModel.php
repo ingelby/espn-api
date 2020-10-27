@@ -54,6 +54,37 @@ class EventModel extends AbstractEspnModel
     }
 
     /**
+     * @param int[] $teamIds
+     * @return bool
+     */
+    public function hasTeamIdsCompeting(array $teamIds)
+    {
+        \Yii::info('Searching for teamIds: ' . implode(', ', $teamIds) . ' in eventId: ' . $this->id);
+        if (empty($this->getCompetitions())) {
+            \Yii::info('No competitions for event: ' . $eventModel->id);
+            return false;
+        }
+        $competitions = $this->getCompetitions();
+        foreach ($competitions as $competition) {
+            if (empty($competition->getCompetitors())) {
+                \Yii::info('No competitors for event: ' . $eventModel->id . ' competition: ' . $competition->id);
+                continue;
+            }
+
+            foreach ($competition->getCompetitors() as $competitor) {
+                if (null === $team = $competitor->getTeam()) {
+                    continue;
+                }
+                if (in_array($team->id, $teamIds, false)) {
+                    \Yii::info('EventId: ' . $this->id . ' contains team: ' . $team->id);
+                    return true;
+                }
+            }
+        }
+        \Yii::info('EventId: ' . $this->id . ' does not contain searched team');
+    }
+
+    /**
      * @param EventModel[] $eventModels
      * @return TeamModel[]
      */
