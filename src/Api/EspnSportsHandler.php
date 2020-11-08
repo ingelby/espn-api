@@ -359,7 +359,7 @@ class EspnSportsHandler extends AbstractHandler
                     }
 
                     $rawTeamData = current($rawLeagueData['teams']);
-                    $teams[$teamId] = $this->mapEnrichedTeamData($rawTeamData);
+                    $teams[$teamId] = $enrichedTeamModel = $this->mapEnrichedTeamData($rawTeamData);
                     \Yii::$app->cache->set(
                         EnrichedTeamModel::CACHE_KEY . $teamId,
                         $enrichedTeamModel,
