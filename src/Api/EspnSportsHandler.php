@@ -263,17 +263,16 @@ class EspnSportsHandler extends AbstractHandler
      * @throws EspnMappedException
      * @throws EspnServerException
      */
-    public function getSportsLeaguesEvents(array $leagueSlugs): array
+    public function getSportsLeaguesEvents(array $leagueSlugs, array $params = []): array
     {
-        $rawResponse = $this->get(
-            '/v1/sports/events',
+        $queryParams = array_merge(
             [
-                'leagues'     => implode(',', $leagueSlugs),
-                'daysback'    => 20,
-                'daysforward' => 20,
-
-            ]
+                'leagues' => implode(',', $leagueSlugs),
+            ],
+            $params
         );
+
+        $rawResponse = $this->get('/v1/sports/events', $queryParams);
 
         $sportsLeaguesEvents = [];
         $this->validateSportsResponse($rawResponse);

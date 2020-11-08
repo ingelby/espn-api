@@ -82,6 +82,7 @@ class EventModel extends AbstractEspnModel
             }
         }
         \Yii::info('EventId: ' . $this->id . ' does not contain searched team');
+        return false;
     }
 
     /**
